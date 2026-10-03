@@ -4,7 +4,7 @@ param([switch]$Update)
 $ErrorActionPreference = 'Continue'
 $ProgressPreference = 'SilentlyContinue'
 
-$Repo    = 'somacareapp-bot/somcare-cms'
+$Repo    = 'somacareapp-bot/somcare-cms-app'
 $Root    = 'C:\SomCare'
 $App     = Join-Path $Root 'app'
 $Compose = Join-Path $App 'docker\docker-compose.yml'
@@ -68,20 +68,15 @@ if (-not $ready) { Fail 'Docker did not start. Open Docker Desktop, wait until i
 # ---- 4. Get the code from GitHub ----
 function Get-Code {
     Say 'Downloading SomCare from GitHub'
-    $sec = Read-Host 'Paste the GitHub access token (it stays hidden)' -AsSecureString
-    $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($sec)
-    $tok = [Runtime.InteropServices.Marshal]::PtrToStringAuto($bstr)
-    [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
     $zip = Join-Path $env:TEMP 'somcare.zip'
     $tmp = Join-Path $env:TEMP 'somcare_x'
     if (Test-Path $tmp) { Remove-Item $tmp -Recurse -Force }
     try {
         [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-        Invoke-WebRequest "https://api.github.com/repos/$Repo/zipball/main" -Headers @{ Authorization = "token $tok"; 'User-Agent' = 'somcare-installer' } -OutFile $zip
+        Invoke-WebRequest "https://api.github.com/repos/$Repo/zipball/main" -Headers @{ 'User-Agent' = 'somcare-installer' } -OutFile $zip
     } catch {
-        Fail 'Download failed. Check the internet connection and that the token has repo access.'
-    } finally { $tok = $null }
-    Expand-Archive $zip $tmp -Force
+        Fail 'Download failed. Check the internet connection and try again.'
+    } finally {    Expand-Archive $zip $tmp -Force
     $src = (Get-ChildItem $tmp -Directory | Select-Object -First 1).FullName
     New-Item $App -ItemType Directory -Force | Out-Null
     # keep real settings and user uploads when updating
